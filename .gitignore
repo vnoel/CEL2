@@ -1,2 +1,4 @@
+*.pyc
 debug_data/*.npz
 test_data/*.hdf
+test_output/
