@@ -41,7 +41,9 @@ def integrate_signal(data, alt):
     integrate = trapz(data[::-1], x=alt[::-1])
     return integrate
 
-def atb_compute_snr(atb, alt):
+
+def data_compute_snr(atb, alt):
+    # used in cel2_orbit.py
     
     idx = (alt >= 28) & (alt <= 30)
     noise = np.std(atb[:,idx], axis=1)
@@ -51,10 +53,21 @@ def atb_compute_snr(atb, alt):
     snr = atb / noise
     
     return snr
+
+
+def data_remove_below(atb, alt, z, invalid=-9999.):
+    # used in cel2_orbit.py
+
+    nprof = atb.shape[0]
+    for iprof in np.r_[0:nprof]:
+        idx = alt <= groundlev[iprof]
+        atb[iprof,idx] = invalid
+
+    return atb
+
     
-def data_remove_low_snr(data, alt, snr, datatype):
-    
-    # this is equivalent to the matlab function keepgoodsky.m
+def data_remove_low_snr(data, alt, snr, datatype, invalid=-9999.):
+    # used in cel2_orbit.py
     
     snr_thresh = np.ones(data.shape)
     idx = (alt < 8.185) 
@@ -64,156 +77,111 @@ def data_remove_low_snr(data, alt, snr, datatype):
     idx = (alt >= 12)
     snr_thresh[:,idx] = min_snr_high[datatype]
     
-    data[snr < snr_thresh] = -9999.
+    data[snr < snr_thresh] = invalid
     
     return data
 
-def data_remove_small_vertical_features(data, small=4):
+def _cloud_mask_remove_small_features(cloud_mask, hext_min=1, vext_min=2, clear_sky=0):
     
-    # this is equivalent to the matlab function nonoise.m
+    # labeled, nclouds = ndimage.label(cloud_mask)
+    # sls = ndimage.find_objects(labeled)
+    # for i, sl in enumerate(sls):
+    #     hsl, vsl = sl
+    #     hext = (hsl.stop - hsl.start)
+    #     vext = (vsl.stop - vsl.start)
+    #     if vext < vext_min or hext < hext_min:
+    #         cloud_mask[sl] = clear_sky
     
-    nprof, nalt = data.shape
+    structure = np.zeros((hext_min+2, vext_min+2), dtype=np.int)
+    structure[1:-1,1:-1] = 1
+    cloud_mask = ndimage.binary_closing(cloud_mask, structure=structure)
     
-    for i in np.r_[0:nprof]:
-        ialt = 1
-        while ialt < nalt:
-            idx = data[i,ialt:] > 0
-            if np.sum(idx) == 0:
-                break
-            
-            while data[i,ialt] <= 0 and ialt < nalt:
-                ialt += 1
-                
-            # first valid data : ialt
-            # look for the end of the valid data succession
-            
-            ialt2 = ialt
-            while (data[i,ialt2] > 0) and (ialt2 < nalt):
-                ialt2 += 1
-            
-            if (ialt2-ialt) < small:
-                data[i,ialt:ialt2] = -9999.
-            
-            ialt = ialt2
-            
-    return data
-    
-def detect_clouds_from_part_atb(atb, alt):
-    '''
-    Detect cloud in cleaned-up particulate backscatter
-    (i.e. atb < threshold and small features were removed previously)
-    '''
-    
-    # this is equivalent to the matlab function DetectBottomTopCloud.m
+    return cloud_mask
 
-    nprof, nalt = atb.shape
-    base = np.ones([nprof, nl]) * -9999.
-    top = np.ones_like(base) * -9999.
+def _cloud_mask_find_layers(cloud_mask, alt, empty=-9999.):
     
-    for iprof in np.r_[0:nprof]:
-
-        prof = atb[iprof,:]
-        ialt = 0
-        ilayer = 0
-                
-        while ialt < nalt and ilayer < nl:
-            
-            if np.all(np.isnan(prof[ialt:])):
-                break
-        
-            # look for the first valid value
-            while ialt < nalt:
-                if prof[ialt] > 0:
-                    break
-                ialt += 1
-                
-            if ialt==nalt:
-                break
-                
-            # first valid value = cloudtop
-            ialttop = ialt
-        
-            # now look for the first invalid value
-            while ialt < nalt:
-                if (prof[ialt] < 0) and ((ialt-ialttop) > 3):
-                    break
-                ialt += 1
-            ialtbase = ialt
-
-            top[iprof,ilayer] = alt[ialttop]
-            base[iprof,ilayer] = alt[ialtbase]
-            
-            ilayer += 1
-            
+    nprof, nalt = cloud_mask.shape
+    base = np.ones([nprof, nl]) * empty
+    top = np.ones([nprof, nl]) * empty
+    for i in np.r_[0:n_prof]:
+        # cloud mask profile = 0 if clear-sky, 1 if cloud
+        # diff(cloud mask) = 1 at cloud top, -1 at cloud base
+        # altitude is top to bottom
+        profdiff = np.diff(cloud_mask[i,:])
+        idx_base = (profdiff > 0)
+        idx_top = (profdiff < 0)
+        if idx.sum() > nl:
+            print 'Too many layers found : ', idx.sum()
+        base[i,:] = alt[idx_base][:nl]
+        top[i,:] = alt[idx_top][:nl]
     return base, top
-    
+        
+            
+def atb_find_layers(atb, mol, alt, datatype='ZN', invalid=-9999., clear_sky=-9998.):
+    # used in cel2_orbit.py
 
-def detect_clouds_from_atb(atb, mol, alt, datatype):
-    '''
-    Detect cloud using attenuated total backscatter and molecular backscatter
-    '''
-
-    # datatype = ZN or ZD
     threshold = atb_min[datatype]
 
     # approximate particulate atb
     atb_part = atb - mol
-    idx = (atb < -10) | (mol < -10)
-    atb_part[idx] = -9999.
+    idx = (atb == invalid) | (mol == invalid)
+    atb_part[idx] = invalid
 
-    # clear-sky removal
-    atb_part[atb_part < threshold] = -9999.
-
-    debug_print('Removing small features')
-    atb_part = data_remove_small_vertical_features(atb_part)
-
-    debug_print('Detecting cloud layers')
-    base, top = detect_clouds_from_part_atb(atb_part, alt)
+    atb_part[atb_part < threshold] = clear_sky
+    cloud_mask = (atb_part > 0) * 1
+    
+    cloud_mask = _cloud_mask_remove_small_features(cloud_mask)    
+    base, top = _cloud_mask_find_layers(cloud_mask, alt)
 
     return base, top
 
-def remove_layers_below_ground(base, top, elev):
+def layers_merge_close(base, top, closeness=0.12):
+
+    nprof = base.shape[0]
+    for i in np.arange(nprof):
+        for j in np.arange(nl-1):
+            if base[i,j] < -1000:
+                continue
+
+            if (base[i,j] - top[i,j+1]) <= closeness:
+                base[i,j] = base[i,j+1]
+
+                if j < (nl-1):
+                    # offset the rest of the layers
+                    base[i,j+1:nl-1] = base[i,j+2:nl]
+                    top[i,j+1:nl-1] = top[i,j+2:nl]
+
+                base[i,nl-1] = -9999.
+                top[i,nl-1] = -9999.
+
+    return base, top
+    
+def layers_remove_below(base, top, zvector, invalid=-9999.):
     
     nprof = base.shape[0]
     for i in np.arange(nprof):
         for j in np.arange(nl):
             if base[i,j] < -1000:
                 continue
-                
-            if top[i,j] <= elev[i]:
-                base[i,j] = -9999.
-                top[i,j] = -9999.
+            if top[i,j] <= zvector[i]:
+                base[i,j] = invalid
+                top[i,j] = invalid
+            if base[i,j] <= zvector[i]:
+                base[i,j] = zvector[i]
+            
+    return base, top
+    
 
-            if base[i,j] <= elev[i]:
-                base[i,j] = elev[i]
-                
-            
-    return base, top
-    
-def merge_close_layers(base, top, closeness=0.12):
-    
-    # the first detected cloud layer is the highest
-    
+def layers_remove_above(base, top, zvector, invalid=-9999.):
     nprof = base.shape[0]
-    for i in np.arange(nprof):
-        for j in np.arange(nl-1):
-            if base[i,j] < -1000:
-                continue
-            
-            if (base[i,j] - top[i,j+1]) <= closeness:
-            
-                base[i,j] = base[i,j+1]
-                
-                if j < (nl-1):
-                    # offset the rest of the layers
-                    base[i,j+1:nl-1] = base[i,j+2:nl]
-                    top[i,j+1:nl-1] = top[i,j+2:nl]
-                
-                base[i,nl-1] = -9999.
-                top[i,nl-1] = -9999.
-                            
+    for i in np.r_[0:nprof]:
+        for j in np.r_[0:nl]:
+            if base[i,j] > zvector[i]:
+                base[i,j] = invalid
+                top[i,j] = invalid
+
     return base, top
-            
+
     
 def layers_opacity(base, top, ground_return, datatype):
     
@@ -238,6 +206,61 @@ def layers_opacity(base, top, ground_return, datatype):
         
     return opacity
                 
+
+def layers_temperature(base, top, temp, alt):
+
+    nprof = temp.shape[0]
+    ltemp = np.ones_like(top) * -9999.
+
+    for iprof in np.r_[0:nprof]:
+        tprof = temp[iprof,:]
+        for ilayer in np.r_[0:nl]:
+            if top[iprof,ilayer] < 0:
+                continue
+
+            idx = (alt >= base[iprof,ilayer]) & (alt <= top[iprof,ilayer]) & (tprof > -273.)
+            if idx.sum() > 0:
+                ltemp[iprof,ilayer] = np.mean(tprof[idx])
+
+    return ltemp
+                
+           
+def layers_cloud_id(base, top, alt):
+    
+    nprof = base.shape[0]
+    nalt = alt.size
+    
+    cloud_mask = np.zeros((nprof, nalt))
+    for i in np.r_[0:nprof]:
+        for j in np.r_[0:nl]:
+            if base[i,j] < 0 or top[i,j] < 0:
+                continue
+            idx = (alt >= base[i,j]) & (alt < top[i,j])
+            cloud_mask[i,idx] = 1
+
+    labeled, nclouds = ndimage.label(cloud_mask > 0)
+    cloud_id = np.ones((nprof, nl)) * -9999.
+
+    for i in np.r_[0:nprof]:
+        for j in np.r_[0:nl]:
+            if base[i,j] < 0 or top[i,j] < 0:
+                continue
+            idx = (alt >= base[i,j]) & (alt < top[i,j])
+            cloud_id[i,j] = np.max(labeled[i,idx])
+                
+    return cloud_id, labeled
+    
+def cloud_horizontal_extension(cloud_labeled_mask, horizontal_resolution=0.333):
+    
+    nclouds = np.max(cloud_labeled_mask)
+    sls = ndimage.find_objects(cloud_labeled_mask)
+    hext = np.zeros([nclouds+1])
+    for i, sl in enumerate(sls):
+        hsl, vsl = sl
+        hext[i] = (hsl.stop - hsl.start) * horizontal_resolution
+    return hext
+    
+                
 def compute_ground_return(atb, alt, elev):
     
     nprof = atb.shape[0]
@@ -250,9 +273,7 @@ def compute_ground_return(atb, alt, elev):
     return ground_return
     
             
-def compute_layer_iatb(base, top, atb, alt):
-        
-    # this was before part of DetectBottomTopCloud.m
+def layers_iatb(base, top, atb, alt):
     
     nprof = atb.shape[0]
     iatb = np.ones_like(top) * -9999.
@@ -268,27 +289,9 @@ def compute_layer_iatb(base, top, atb, alt):
                 iatb[iprof, ilayer] = integrate_signal(prof[idx], alt[idx])
             
     return iatb
-    
-def compute_layer_temp(base, top, temp, alt):
 
-    # this was before part of DetectBottomTopCloud.m
-    
-    nprof = temp.shape[0]
-    ltemp = np.ones_like(top) * -9999.
-    
-    for iprof in np.r_[0:nprof]:
-        tprof = temp[iprof,:]
-        for ilayer in np.r_[0:20]:
-            if top[iprof,ilayer] < 0:
-                continue
-            
-            idx = (alt >= base[iprof,ilayer]) & (alt <= top[iprof,ilayer]) & (tprof > -273.)
-            if idx.sum() > 0:
-                ltemp[iprof,ilayer] = np.mean(tprof[idx])
-
-    return ltemp
         
-def compute_layer_volume_depolarization(base, top, para, perp, alt):
+def layers_volume_depolarization(base, top, para, perp, alt):
     
     nprof = para.shape[0]
     depol = np.ones_like(base) * -9999.
@@ -313,7 +316,7 @@ def compute_layer_volume_depolarization(base, top, para, perp, alt):
                 
     return depol
                 
-def compute_layer_particulate_depolarization(base, top, para, perp, alt, mol):
+def layers_particulate_depolarization(base, top, para, perp, alt, mol):
     
     molperp = 0.02 * mol / 1.02
     molpara = mol - molperp
@@ -351,7 +354,7 @@ def compute_layer_particulate_depolarization(base, top, para, perp, alt, mol):
         
     return depol, part_para, part_perp
                 
-def compute_layer_volume_color_ratio(base, top, atb532, atb1064, alt):
+def layers_volume_color_ratio(base, top, atb532, atb1064, alt):
     
     nprof = atb532.shape[0]
     vcr = np.ones_like(base) * -9999.
@@ -375,7 +378,7 @@ def compute_layer_volume_color_ratio(base, top, atb532, atb1064, alt):
     
     return vcr
     
-def compute_particulate_color_ratio(base, top, atb532, atb1064, alt, mol):
+def layers_particulate_color_ratio(base, top, atb532, atb1064, alt, mol):
     
     Smol = 8 * np.pi / 3.
     
@@ -409,7 +412,7 @@ def compute_particulate_color_ratio(base, top, atb532, atb1064, alt, mol):
     return pcr
             
     
-def compute_optical_depth(iatb532):
+def layers_optical_depth(iatb532):
     
     eta = 0.7
     S = 25
@@ -459,81 +462,8 @@ def recouvrement(base, top, bases, tops):
             
     return found
     
-def clouds_remove_short_layers(base, top):
-    
-    # this was the matlab function ClearSky4.m
-    
-    nprof, nlay = base.shape
-    
-    base2 = np.ones_like(base) * -9999.
-    top2 = np.ones_like(top) * -9999.
-    
-    for i in np.r_[4:nprof-4]:
-        for j in np.r_[0:nlay]:
-            
-            if top[i,j] < 0:
-                continue
-            
-            # look forward
-            forward1, forward2, forward3 = False, False, False
-            
-            found1 = recouvrement(base[i,j], top[i,j], base[i+1,:], top[i+1,:])
-            forward1 = (True if found1.sum() > 0 else forward1)
-            
-            for ilay1, f1 in enumerate(found1):
-                if f1==0: continue
 
-                found2 = recouvrement(base[i+1,ilay1], top[i+1,ilay1], base[i+2,:], top[i+2,:])
-                forward2 = (True if found2.sum() > 0 else forward2)                
-                
-                for ilay2, f2 in enumerate(found2):
-                    if f2==0: continue
-                        
-                    found3 = recouvrement(base[i+2,ilay2], top[i+2,ilay2], base[i+3,:], top[i+3,:])
-                    forward3 = (True if found3.sum() > 0 else forward3)
-                            
-            backward1, backward2, backward3 = False, False, False
-            
-            found1 = recouvrement(base[i,j], top[i,j], base[i-1,:], top[i-1,:])
-            backward1 = (True if found1.sum() > 0 else backward1)
-            
-            for ilay1, f1 in enumerate(found1):
-                if f1==0: continue
-                
-                found2 = recouvrement(base[i-1,ilay1], top[i-1,ilay1], base[i-2,:], top[i-2,:])
-                backward2 = (True if found2.sum() > 0 else backward2)
-                for ilay2, f2 in enumerate(found2):
-                    if f2==0: continue
-                
-                    found3 = recouvrement(base[i-2,ilay2], top[i-2,ilay2], base[i-3,:], top[i-3,:])
-                    backward3 = (True if found3.sum() > 0 else backward3)
-    
-            if forward3 or backward3 or (backward2 and forward1) or (backward1 and forward2):
-                # on a trouve une couche longue de 4 profils
-                base2[i,j] = base[i,j]
-                top2[i,j] = top[i,j]
-                
-    return base2, top2
-    
-def clouds_remove_1km_above_tropopause(base, top, tropoz):
-    nprof = base.shape[0]
-    for iprof in np.r_[0:nprof]:
-        for ilayer in np.r_[0:20]:
-            if base[iprof,ilayer] > (tropoz[iprof] + 1):
-                base[iprof,ilayer] = -9999.
-                top[iprof,ilayer] = -9999.
-                
-    return base, top
-    
-def atb_remove_below_ground(atb, alt, groundlev):
-    
-    nprof = atb.shape[0]
-    for iprof in np.r_[0:nprof]:
-        idx = alt <= groundlev[iprof]
-        atb[iprof,idx] = -9999.
-        
-    return atb
-    
+
 def data_clouds(data, base, top, alt):
     nprof = data.shape[0]
     data2 = np.ones_like(data) * -9999.
