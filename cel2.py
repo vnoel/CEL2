@@ -22,14 +22,14 @@ cel2_version_minor = 0
 netcdf_format = 'NETCDF3_CLASSIC'
 netcdf_extension = 'nc3'
 
-outpath = '/home/noel/projects/CEL2/test_output/'
+outpath = '/Users/vnoel/Projects/CEL2/test_output/'
 outbase = 'CEL2-V%1d-%02d.' % (cel2_version_major, cel2_version_minor)
 
 debug = False
 debug_file = None
 
 # maximum number of layers per profile
-nl = 20
+nl = 30
 
 class cel2_data(object):
     
@@ -83,8 +83,10 @@ class cel2_data(object):
         
         
     def set_coords(self, lon, lat):
-        self.longitude[:] = lon[:]
-        self.latitude[:] = lat[:]
+        print self.longitude.shape
+        print lon.shape
+        self.longitude[:] = np.squeeze(lon[:])
+        self.latitude[:] = np.squeeze(lat[:])
     
     
     def set_layers(self, base, top):

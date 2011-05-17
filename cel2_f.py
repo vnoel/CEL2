@@ -3,7 +3,7 @@
 
 import numpy as np
 from scipy.integrate import trapz
-import sel2
+from scipy import ndimage
 
 # the threshold values below have been carefully calibrated for
 # nighttime data, not so much for daytime
@@ -12,24 +12,17 @@ import sel2
 min_snr_high = {'ZN':4.5, 'ZD':1.4}
 
 # minimum snr for 8.2 < alt < 12 km
-min_snr_mid = {'ZN':20, 'ZD':9}
+min_snr_mid = {'ZN':9, 'ZD':9}
 
 # minimum snr for alt < 8.2 km
-min_snr_low = {'ZN':35, 'ZD':9}
-
+min_snr_low = {'ZN':10, 'ZD':9}
 
 # max number of layers
-nl = 20
+nl = 30
 
 # particular atb threshold for cloud detection
-atb_min = {'ZN':5.2e-5, 'ZD':7e-5}
+atb_min = {'ZN':1e-4, 'ZD':1e-5}
 
-debug = sel2.debug
-debug_file = sel2.debug_file
-
-def debug_print(string):
-    if debug:
-        print(string)    
 
 def integrate_signal(data, alt):
     '''
@@ -55,12 +48,12 @@ def data_compute_snr(atb, alt):
     return snr
 
 
-def data_remove_below(atb, alt, z, invalid=-9999.):
+def data_remove_below(atb, alt, zvector, invalid=-9999.):
     # used in cel2_orbit.py
 
     nprof = atb.shape[0]
     for iprof in np.r_[0:nprof]:
-        idx = alt <= groundlev[iprof]
+        idx = alt <= zvector[iprof]
         atb[iprof,idx] = invalid
 
     return atb
@@ -81,20 +74,17 @@ def data_remove_low_snr(data, alt, snr, datatype, invalid=-9999.):
     
     return data
 
-def _cloud_mask_remove_small_features(cloud_mask, hext_min=1, vext_min=2, clear_sky=0):
+def _cloud_mask_remove_small_features(cloud_mask, alt, horizontal_resolution=0.333, hext_min=0.333, vext_min=0.6, clear_sky=0):
     
-    # labeled, nclouds = ndimage.label(cloud_mask)
-    # sls = ndimage.find_objects(labeled)
-    # for i, sl in enumerate(sls):
-    #     hsl, vsl = sl
-    #     hext = (hsl.stop - hsl.start)
-    #     vext = (vsl.stop - vsl.start)
-    #     if vext < vext_min or hext < hext_min:
-    #         cloud_mask[sl] = clear_sky
+    labeled, nclouds = ndimage.label(cloud_mask)
     
-    structure = np.zeros((hext_min+2, vext_min+2), dtype=np.int)
-    structure[1:-1,1:-1] = 1
-    cloud_mask = ndimage.binary_closing(cloud_mask, structure=structure)
+    sls = ndimage.find_objects(labeled)
+    for i, sl in enumerate(sls):
+        hsl, vsl = sl
+        hext = (hsl.stop - hsl.start) * horizontal_resolution
+        vext = np.abs(alt[vsl.stop] - alt[vsl.start])
+        if vext < vext_min or hext < hext_min:
+            cloud_mask[sl] = clear_sky
     
     return cloud_mask
 
@@ -103,17 +93,19 @@ def _cloud_mask_find_layers(cloud_mask, alt, empty=-9999.):
     nprof, nalt = cloud_mask.shape
     base = np.ones([nprof, nl]) * empty
     top = np.ones([nprof, nl]) * empty
-    for i in np.r_[0:n_prof]:
+    cloud_mask_diff = np.diff(1.*cloud_mask, axis=1)
+    for i in np.r_[0:nprof]:
         # cloud mask profile = 0 if clear-sky, 1 if cloud
         # diff(cloud mask) = 1 at cloud top, -1 at cloud base
         # altitude is top to bottom
-        profdiff = np.diff(cloud_mask[i,:])
-        idx_base = (profdiff > 0)
-        idx_top = (profdiff < 0)
-        if idx.sum() > nl:
-            print 'Too many layers found : ', idx.sum()
-        base[i,:] = alt[idx_base][:nl]
-        top[i,:] = alt[idx_top][:nl]
+        profdiff = cloud_mask_diff[i,:]
+        idx_base = (profdiff < 0)
+        idx_top = (profdiff > 0)
+        # if idx_base.sum() > nl or idx_top.sum() > nl:
+        #     print 'Too many layers found : ', idx_base.sum(), idx_top.sum()
+        n = np.min([idx_base.sum(), idx_top.sum(), nl])
+        base[i,:n] = alt[idx_base][:n]
+        top[i,:n] = alt[idx_top][:n]
     return base, top
         
             
@@ -128,9 +120,9 @@ def atb_find_layers(atb, mol, alt, datatype='ZN', invalid=-9999., clear_sky=-999
     atb_part[idx] = invalid
 
     atb_part[atb_part < threshold] = clear_sky
-    cloud_mask = (atb_part > 0) * 1
+    cloud_mask = (atb_part > 0)
     
-    cloud_mask = _cloud_mask_remove_small_features(cloud_mask)    
+    cloud_mask = _cloud_mask_remove_small_features(cloud_mask, alt)    
     base, top = _cloud_mask_find_layers(cloud_mask, alt)
 
     return base, top
@@ -246,6 +238,8 @@ def layers_cloud_id(base, top, alt):
             if base[i,j] < 0 or top[i,j] < 0:
                 continue
             idx = (alt >= base[i,j]) & (alt < top[i,j])
+            if idx.sum() == 0:
+                continue
             cloud_id[i,j] = np.max(labeled[i,idx])
                 
     return cloud_id, labeled

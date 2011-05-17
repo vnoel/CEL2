@@ -21,7 +21,7 @@ import os
 import cel2
 import cel2_f
 
-# sys.setrecursionlimit(3000)
+navg = 1
 
 def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     '''
@@ -46,27 +46,28 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
             print 'File already exists : ', cel2_data.filepath+'/'+cel2_data.filename
             return
 
-    lon, lat = cal.coords(navg=1)
+    lon, lat = cal.coords(navg=navg)
     nprof = lon.size
     cel2_data.init_data(nprof)
     
     alt = calipso.lidar_alt
-    
-    time = cal.time(navg=1)
-    atb = cal.atb(navg=1)
-    atb1064 = cal.atb1064(navg=1)
-    perp = cal.perp(navg=1)
-    para = atb - perp
-    temp = cal.temperature_on_lidar_alt(navg=1)
-    mol = cal.mol_on_lidar_alt_calibrated(navg=1, zcal=(34,38))
-    tropoz = cal.tropopause_height(navg=1)
-    elev = cal.surface_elevation(navg=1)
     datatype = cal.orbit[-2:]
+
+    time = cal.time(navg=navg)
+    atb = cal.atb(navg=navg)
+    atb1064 = cal.atb1064(navg=navg)
+    perp = cal.perp(navg=navg)
+    para = atb - perp
+    temp = cal.temperature_on_lidar_alt(navg=navg)
+    mol = cal.mol_on_lidar_alt_calibrated(navg=navg, zcal=(34,38))
+    tropoz = cal.tropopause_height(navg=navg)
+    elev = cal.surface_elevation(navg=navg)
     cal.close()
     
-    debug_print('Loaded %d profiles' % (atb.shape[0]))
     if debug:
-        np.savez('debug_data/data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
+        print 'Loaded %d profiles' % (atb.shape[0])
+        if navg > 1:
+            np.savez('debug_data/data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
 
     # check latitude continuity
     
@@ -74,9 +75,9 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     idx = (dlat > 0.1)
     if idx.sum() > 0:
         atb[idx,:] = -9999.
-        debug_print('Found %d latitude problems' % (idx.sum()))
+        print 'Found %d latitude problems' % (idx.sum())
 
-    ground_return = compute_ground_return(atb, alt, elev)
+    ground_return = cel2_f.compute_ground_return(atb, alt, elev)
 
     # removes obviously unphysical values
     
@@ -120,7 +121,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     base, top = cel2_f.layers_remove_above(base, top, tropoz + 3.)
 
     # layer identification
-    cloud_id, cloud_labeled_mask = cel2_f.layers_cloud_id(base, top)
+    cloud_id, cloud_labeled_mask = cel2_f.layers_cloud_id(base, top, alt)
     hext = cel2_f.cloud_horizontal_extension(cloud_labeled_mask)
     
     # now we don't do anymore filtering during the dataset production phase.
@@ -128,18 +129,27 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     # using the properties computed afterwards.
 
     if debug:
-        np.savez('debug_data/data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
+        np.savez('debug_data/data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, base=base, top=top, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
 
     # layers properties
 
+    print 1
     opacity = cel2_f.layers_opacity(base, top, ground_return, datatype)
+    print 2
     ltemp = cel2_f.layers_temperature(base, top, temp, alt)
+    print 3
     iatb = cel2_f.layers_iatb(base, top, atb, alt)
+    print 4
     od = cel2_f.layers_optical_depth(iatb)
+    print 5
     vdp = cel2_f.layers_volume_depolarization(base, top, para, perp, alt)
+    print 6
     pdp, part_para, part_perp = cel2_f.layers_particulate_depolarization(base, top, para, perp, alt, mol)
+    print 7
     vcr = cel2_f.layers_volume_color_ratio(base, top, atb, atb1064, alt)
+    print 8
     pcr = cel2_f.layers_particulate_color_ratio(base, top, atb, atb1064, alt, mol)
+    print 9
                         
     cel2_data.set_time(time)
     cel2_data.set_temperature(ltemp)
