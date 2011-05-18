@@ -82,7 +82,6 @@ def data_remove_low_snr(data, alt, snr, datatype, invalid=-9999.):
 def _cloud_mask_remove_size(cloud_mask, alt, horizontal_resolution=0.333, hext_min=0.333, hext_max=1000000., vext_min=0.6, vext_max=100., clear_sky=0):
     
     labeled, nclouds = ndimage.label(cloud_mask)
-    np.savez('debug_data/labeled.npz', labeled=labeled)
     
     sls = ndimage.find_objects(labeled)
     for i, sl in enumerate(sls):
@@ -91,8 +90,6 @@ def _cloud_mask_remove_size(cloud_mask, alt, horizontal_resolution=0.333, hext_m
         vext = np.abs(alt[vsl.stop] - alt[vsl.start])
         if vext < vext_min or hext < hext_min or vext > vext_max or hext > hext_max:
             cloud_mask[sl] = clear_sky
-            labeled[sl] = -2
-    np.savez('debug_data/labeled_removed.npz', labeled=labeled)
     
     return cloud_mask
 
