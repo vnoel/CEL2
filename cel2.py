@@ -19,8 +19,8 @@ except:
 
 cel2_version_major = 1
 cel2_version_minor = 0
-netcdf_format = 'NETCDF3_CLASSIC'
-netcdf_extension = 'nc3'
+netcdf_format = 'NETCDF4_CLASSIC'
+netcdf_extension = 'nc4'
 
 # this can be overridden by cel2_process_period.py
 outpath = './test_output/'
@@ -84,8 +84,6 @@ class cel2_data(object):
         
         
     def set_coords(self, lon, lat):
-        print self.longitude.shape
-        print lon.shape
         self.longitude[:] = np.squeeze(lon[:])
         self.latitude[:] = np.squeeze(lat[:])
     
