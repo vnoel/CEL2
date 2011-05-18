@@ -22,7 +22,8 @@ cel2_version_minor = 0
 netcdf_format = 'NETCDF3_CLASSIC'
 netcdf_extension = 'nc3'
 
-outpath = '/Users/vnoel/Projects/CEL2/test_output/'
+# this can be overridden by cel2_process_period.py
+outpath = './test_output/'
 outbase = 'CEL2-V%1d-%02d.' % (cel2_version_major, cel2_version_minor)
 
 debug = False

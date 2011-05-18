@@ -10,7 +10,10 @@ import sys
 import os
 import numpy as np
 import cel2_orbit
+import cel2
 import calipso
+
+cel2.outpath = '/homedata/noel/Projects/CEL2/test_output/'
 
 def process_period(years, months, days, with_cp):
 
