@@ -40,10 +40,11 @@ class cel2_data(object):
         self.orig_l1_file = orig_l1_file
         self.filepath = outpath + '%04d/%04d_%02d_%02d' % (year, year, month, day)
         self.filename = outbase + '%04d-%02d-%02d%s.%s' % (year, month, day, self.orbit, netcdf_extension)
+        self.nl = nl
     
         
     def _layer_data(self, nprof):
-        return np.ones([nprof, nl]) * -9999.
+        return np.ones([nprof, self.nl]) * -9999.
     
     
     def init_data(self, nprof):
@@ -64,6 +65,22 @@ class cel2_data(object):
         self.particulate_perpendicular_backscatter = self._layer_data(nprof)
         self.cloud_id = self._layer_data(nprof)
         self.opacity_flag = self._layer_data(nprof)
+        
+        
+    def set_nlayers_max(self, nlmax):
+        self.layer_top_altitude = self.layer_top_altitude[:,:nlmax]
+        self.layer_base_altitude = self.layer_base_altitude[:,:nlmax]
+        self.midlayer_temperature = self.midlayer_temperature[:,:nlmax]
+        self.integrated_attenuated_backscatter_532 = self.integrated_attenuated_backscatter_532[:,:nlmax]
+        self.feature_optical_depth = self.feature_optical_depth[:,:nlmax]
+        self.integrated_particulate_depolarization_ratio = integrated_particulate_depolarization_ratio[:,:nlmax]
+        self.integrated_volume_depolarization_ratio = self.integrated_volume_depolarization_ratio[:,:nlmax]
+        self.integrated_particulate_color_ratio = self.integrated_particulate_color_ratio[:,:nlmax]
+        self.integrated_volume_color_ratio = self.integrated_volume_color_ratio[:,:nlmax]
+        self.particulate_parallel_backscatter = self.particulate_parallel_backscatter[:,:nlmax]
+        self.particulate_perpendicular_backscatter = self.particulate_perpendicular_backscatter[:,:nlmax]
+        self.cloud_id = self.cloud_id[:,:nlmax]
+        self.opacity_flag = self.opacity_flag[:,:nlmax]
         
         
     def invalid_data_based_on(self, mask):
@@ -156,20 +173,20 @@ class cel2_data(object):
         nc.createVariable('Profile_Time', 'f8', ('time',))
         nc.createVariable('longitude', 'f8', ('time',))
         nc.createVariable('latitude', 'f8', ('time',))
-        nc.createVariable('layer_top_altitude', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('layer_base_altitude', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('layer_temperature', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_attenuated_backscatter_532', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_particulate_parallel_backscatter_532', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_particulate_perpendicular_backscatter_532', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_particulate_depolarization_ratio', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_volume_depolarization_ratio', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_particulate_color_ratio', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('integrated_volume_color_ratio', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('layer_optical_depth', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('layer_opacity_flag', 'f4', ('time', 'nmaxlayers'))
-        nc.createVariable('layer_cloud_id', 'i4', ('time', 'nmaxlayers'))
-        nc.createVariable('cloud_horizontal_extension', 'f4', ('nclouds',))
+        nc.createVariable('layer_top_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('layer_base_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('layer_temperature', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        # nc.createVariable('integrated_attenuated_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        # nc.createVariable('integrated_particulate_parallel_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        # nc.createVariable('integrated_particulate_perpendicular_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        # nc.createVariable('integrated_particulate_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('integrated_volume_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        # nc.createVariable('integrated_particulate_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('integrated_volume_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('layer_optical_depth', 'f4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('layer_opacity_flag', 'i1', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('layer_cloud_id', 'i4', ('time', 'nmaxlayers'), zlib=True)
+        nc.createVariable('cloud_horizontal_extension', 'f4', ('nclouds',), zlib=True)
         
         nc.variables['Profile_Time'][:] = self.time
         nc.variables['longitude'][:] = self.longitude
@@ -177,12 +194,12 @@ class cel2_data(object):
         nc.variables['layer_top_altitude'][:,:] = self.layer_top_altitude
         nc.variables['layer_base_altitude'][:,:] = self.layer_base_altitude
         nc.variables['layer_temperature'][:,:] = self.midlayer_temperature
-        nc.variables['integrated_attenuated_backscatter_532'][:,:] = self.integrated_attenuated_backscatter_532
-        nc.variables['integrated_particulate_parallel_backscatter_532'][:,:] = self.particulate_parallel_backscatter
-        nc.variables['integrated_particulate_perpendicular_backscatter_532'][:,:] = self.particulate_perpendicular_backscatter
-        nc.variables['integrated_particulate_depolarization_ratio'][:,:] = self.integrated_particulate_depolarization_ratio
+        # nc.variables['integrated_attenuated_backscatter_532'][:,:] = self.integrated_attenuated_backscatter_532
+        # nc.variables['integrated_particulate_parallel_backscatter_532'][:,:] = self.particulate_parallel_backscatter
+        # nc.variables['integrated_particulate_perpendicular_backscatter_532'][:,:] = self.particulate_perpendicular_backscatter
+        # nc.variables['integrated_particulate_depolarization_ratio'][:,:] = self.integrated_particulate_depolarization_ratio
         nc.variables['integrated_volume_depolarization_ratio'][:,:] = self.integrated_volume_depolarization_ratio
-        nc.variables['integrated_particulate_color_ratio'][:,:] = self.integrated_particulate_color_ratio
+        # nc.variables['integrated_particulate_color_ratio'][:,:] = self.integrated_particulate_color_ratio
         nc.variables['integrated_volume_color_ratio'][:,:] = self.integrated_volume_color_ratio
         nc.variables['layer_optical_depth'][:,:] = self.feature_optical_depth
         nc.variables['layer_opacity_flag'][:,:] = self.opacity_flag
@@ -196,9 +213,9 @@ class cel2_data(object):
         nc.variables['layer_temperature'].units = 'degrees Celsius'
         nc.variables['layer_top_altitude'].units = 'km'
         nc.variables['layer_base_altitude'].units = 'km'
-        nc.variables['integrated_attenuated_backscatter_532'].units = 'km-1'
-        nc.variables['integrated_particulate_parallel_backscatter_532'].units = 'km-1'
-        nc.variables['integrated_particulate_perpendicular_backscatter_532'].units = 'km-1'
+        # nc.variables['integrated_attenuated_backscatter_532'].units = 'km-1'
+        # nc.variables['integrated_particulate_parallel_backscatter_532'].units = 'km-1'
+        # nc.variables['integrated_particulate_perpendicular_backscatter_532'].units = 'km-1'
         
         nc.variables['cloud_horizontal_extension'].units = 'km'
 

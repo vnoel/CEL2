@@ -107,6 +107,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     base, top = cel2_f.layers_merge_close(base, top)
     base, top = cel2_f.layers_remove_below(base, top, elev)
     base, top = cel2_f.layers_remove_above(base, top, tropoz + 3.)
+    print 'Max number of layers in profile : ', np.max(np.sum(base > 0, axis=1))
 
     # layer identification
     cloud_id, cloud_labeled_mask = cel2_f.layers_cloud_id(base, top, alt)
@@ -127,9 +128,9 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     iatb = cel2_f.layers_iatb(base, top, atb, alt)
     od = cel2_f.layers_optical_depth(iatb)
     vdp = cel2_f.layers_volume_depolarization(base, top, para, perp, alt)
-    pdp, part_para, part_perp = cel2_f.layers_particulate_depolarization(base, top, para, perp, alt, mol)
+    # pdp, part_para, part_perp = cel2_f.layers_particulate_depolarization(base, top, para, perp, alt, mol)
     vcr = cel2_f.layers_volume_color_ratio(base, top, atb, atb1064, alt)
-    pcr = cel2_f.layers_particulate_color_ratio(base, top, atb, atb1064, alt, mol)
+    # pcr = cel2_f.layers_particulate_color_ratio(base, top, atb, atb1064, alt, mol)
                         
     cel2_data.set_time(time)
     cel2_data.set_temperature(ltemp)
@@ -142,16 +143,23 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     cel2_data.set_iatb(iatb)
     cel2_data.set_od(od)
     cel2_data.set_volume_depolarization(vdp)
-    cel2_data.set_particulate_depolarization(pdp)
-    cel2_data.set_particulate_parallel_backscatter(part_para)
-    cel2_data.set_particulate_perpendicular_backscatter(part_perp)
+    # cel2_data.set_particulate_depolarization(pdp)
+    # cel2_data.set_particulate_parallel_backscatter(part_para)
+    # cel2_data.set_particulate_perpendicular_backscatter(part_perp)
     cel2_data.set_volume_color_ratio(vcr)
-    cel2_data.set_particulate_color_ratio(pcr)
+    # cel2_data.set_particulate_color_ratio(pcr)
     
     if debug:
         idx = base > 0
         print 'Found %d layers' % idx.sum()
         print ' = %f layer / profile' % (1. * idx.sum() / atb.shape[0])
+
+    if np.any(base > 1000.):
+        print 'Huston, we have a problem: found layer bases > 1000 km'
+
+    max_nlayers_in_profile = np.max(np.sum(base > 0, axis=1))
+    print 'Setting max nlayers to ', max_nlayers_in_profile
+    cel2_data.set_nlayers_max(max_nlayers_in_profile)
     
     cel2_data.invalid_data_based_on(base)
     cel2_data.save()
