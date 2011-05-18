@@ -59,15 +59,15 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     perp = cal.perp(navg=navg)
     para = atb - perp
     temp = cal.temperature_on_lidar_alt(navg=navg)
-    mol = cal.mol_on_lidar_alt_calibrated(navg=navg, zcal=(34,38))
+    mol = cal.mol_on_lidar_alt_calibrated(navg=navg, navgh=1000, zcal=(32,36))
     tropoz = cal.tropopause_height(navg=navg)
     elev = cal.surface_elevation(navg=navg)
     cal.close()
     
     if debug:
         print 'Loaded %d profiles' % (atb.shape[0])
-        if navg > 1:
-            np.savez('debug_data/data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
+        np.savez('debug_data/data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
+        print 'Data cleanup'
 
     # check latitude continuity
     
@@ -79,31 +79,18 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
 
     ground_return = cel2_f.compute_ground_return(atb, alt, elev)
 
-    # removes obviously unphysical values
-    
-    idx = (atb > 0.1) | (atb < -0.1)
-    atb[idx] = -9999.
-    
-    idx = (mol > 0.1) | (mol < -0.1)
-    atb[idx] = -9999.
-    
-    idx = (perp < -0.1) | (perp > 0.1)
-    atb[idx] = -9999.
-    
-    idx = (atb1064 > 0.1) | (atb1064 < -0.1)
-    atb[idx] = -9999.
-    
-    idx = (temp < -120) | (temp > 80)
+    # remove obviously unphysical values    
+    idx = (atb > 0.1) | (atb < -0.1) | (mol > 0.1) | (mol < -0.1) | (perp < -0.1) | (perp > 0.1) | (atb1064 > 0.1) | (atb1064 < -0.1) | (temp < -120) | (temp > 80)
     atb[idx] = -9999.
 
-    # removes below-ground signal
+    # remove below-ground signal
     atb = cel2_f.data_remove_below(atb, alt, elev, invalid=-9999.)
 
-    # removes areas with low SNR on atb
+    # remove areas with low SNR in ATB
     snr = cel2_f.data_compute_snr(atb, alt)
     atb = cel2_f.data_remove_low_snr(atb, alt, snr, datatype, invalid=-9999.)
 
-    # propagates data validity
+    # propagate data validity
     idx = (atb==-9999.)
     mol[idx] = -9999.
     perp[idx] = -9999.
@@ -112,10 +99,10 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
 
     if debug:
         np.savez('debug_data/data_step2_snr.npz', lon=lon, lat=lat, alt=alt, atb=atb)
-
+        print 'Detecting layers'
 
     # layer detection and cleanup
-    base, top = cel2_f.atb_find_layers(atb, mol, alt, datatype)
+    base, top = cel2_f.atb_find_layers(atb, mol, alt, datatype, hext_min=0.3, hext_max=10000000., vext_min=0.6, vext_max=100.)
     base, top = cel2_f.layers_merge_close(base, top)
     base, top = cel2_f.layers_remove_below(base, top, elev)
     base, top = cel2_f.layers_remove_above(base, top, tropoz + 3.)
@@ -129,27 +116,19 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     # using the properties computed afterwards.
 
     if debug:
-        np.savez('debug_data/data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, base=base, top=top, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
+        np.savez('debug_data/data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, base=base, hext=hext, top=top, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
+        print 'Calculating layer properties'
 
     # layers properties
 
-    print 1
     opacity = cel2_f.layers_opacity(base, top, ground_return, datatype)
-    print 2
     ltemp = cel2_f.layers_temperature(base, top, temp, alt)
-    print 3
     iatb = cel2_f.layers_iatb(base, top, atb, alt)
-    print 4
     od = cel2_f.layers_optical_depth(iatb)
-    print 5
     vdp = cel2_f.layers_volume_depolarization(base, top, para, perp, alt)
-    print 6
     pdp, part_para, part_perp = cel2_f.layers_particulate_depolarization(base, top, para, perp, alt, mol)
-    print 7
     vcr = cel2_f.layers_volume_color_ratio(base, top, atb, atb1064, alt)
-    print 8
     pcr = cel2_f.layers_particulate_color_ratio(base, top, atb, atb1064, alt, mol)
-    print 9
                         
     cel2_data.set_time(time)
     cel2_data.set_temperature(ltemp)

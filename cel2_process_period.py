@@ -6,7 +6,7 @@ Created by Vincent Noel on 2010-11-26, LMD/CNRS.
 """
 
 import sys
-import os\"\"
+import os
 import numpy as np
 import sel2_orbit
 import calipso
