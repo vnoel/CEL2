@@ -166,6 +166,9 @@ def main():
         print 'Usage : ./cel2_orbit.py calipso_l1_file'
         sys.exit(1)
         
+    if not os.path.isdir('debug_data'):
+        os.mkdir('debug_data')
+        
     cal_file = sys.argv[1]        
     process_orbit_file(cal_file, with_cp=False, debug=True)
 
