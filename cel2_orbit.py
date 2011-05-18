@@ -22,7 +22,7 @@ import cel2
 import cel2_f
 
 navg = 1
-debug_path = '/homedata/noel/CEL2/debug_data/'
+debug_path = '/homedata/noel/Projects/CEL2/debug_data/'
 
 def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     '''
