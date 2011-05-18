@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
+
 """
-sel2_process_period.py
-Created by Vincent Noel on 2010-11-26, LMD/CNRS.
+cel2_process_period.py
+Created by Vincent Noel on 2011-05-18
 """
 
 import sys
 import os
 import numpy as np
-import sel2_orbit
+import cel2_orbit
 import calipso
 
 def process_period(years, months, days, with_cp):
@@ -23,24 +24,20 @@ def process_period(years, months, days, with_cp):
                     
                 cal_list.sort()
                 for cal_file in cal_list:
-                    sel2_orbit.process_orbit(cal_file, with_cp=with_cp, replace=False)
+                    cel2_orbit.process_orbit(cal_file, with_cp=with_cp, replace=False)
 
 def main():
     
-    with_cp = True
+    with_cp = False
     
     if len(sys.argv) < 2:
-        print 'Usage : ./sel2_process_period.py PERIODE'
+        print 'Usage : ./cel2_process_period.py PERIODE'
         print 'Example periods :'
         print ' 2009 - process all 2009'
         print ' 200903 - process all march 2009'
         print ' 20090310 - process all files from march 10 2009'
         print ' all - process 2006-2010'
         sys.exit(1)
-    
-    if len(sys.argv) > 2:
-        if sys.argv[2] is 'DEBUG':
-            sel2_orbit.debug = True
     
     periode = sys.argv[1]
 
@@ -57,17 +54,11 @@ def main():
     if len(periode) is 8:
         days = [int(periode[6:8])]
 
-    print 'Running sel2_process_period.py'
-    print '  - on years : ', years
-    print '  - on months : ', months[0], '...', months[-1]
-    print '  - on days : ', days[0], '...', days[-1]
-    print '  - atb threshold : ', sel2_orbit.atb_min
+    print 'Running cel2_process_period.py'
+    print '  - years : ', years
+    print '  - months : ', months[0], '...', months[-1]
+    print '  - days : ', days[0], '...', days[-1]
     print '  - Working on temporary file copies : ', with_cp
-    if sel2_orbit.debug:
-        print '\n*** Debug run - only one orbit will be generated'
-        print '*** diagnosis data will be saved in diagnose_orbit/ \n'
-        if not os.path.isdir('diagnose_orbit/'):
-            os.mkdir('diagnose_orbit')
             
     process_period(years, months, days, with_cp)
 
