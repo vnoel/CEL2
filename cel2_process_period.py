@@ -13,7 +13,7 @@ import cel2_orbit
 import cel2
 import calipso
 
-cel2.outpath = '/homedata/noel/Projects/CEL2/test_output/'
+cel2.outpath = '/homedata/noel/Projects/CEL2/'
 
 def process_period(years, months, days, with_cp):
 
@@ -27,7 +27,7 @@ def process_period(years, months, days, with_cp):
                     
                 cal_list.sort()
                 for cal_file in cal_list:
-                    cel2_orbit.process_orbit(cal_file, with_cp=with_cp, replace=False)
+                    cel2_orbit.process_orbit_file(cal_file, with_cp=with_cp, replace=False)
 
 def main():
     
@@ -62,6 +62,7 @@ def main():
     print '  - months : ', months[0], '...', months[-1]
     print '  - days : ', days[0], '...', days[-1]
     print '  - Working on temporary file copies : ', with_cp
+    print '  - output directory :', cel2.outpath
             
     process_period(years, months, days, with_cp)
 
