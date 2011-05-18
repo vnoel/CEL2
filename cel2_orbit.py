@@ -22,6 +22,7 @@ import cel2
 import cel2_f
 
 navg = 1
+debug_path = '/homedata/noel/CEL2/debug_data/'
 
 def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     '''
@@ -66,7 +67,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     
     if debug:
         print 'Loaded %d profiles' % (atb.shape[0])
-        np.savez('debug_data/data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
+        np.savez(debug_path+'data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
         print 'Data cleanup'
 
     # check latitude continuity
@@ -98,7 +99,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     temp[idx] = -9999.
 
     if debug:
-        np.savez('debug_data/data_step2_snr.npz', lon=lon, lat=lat, alt=alt, atb=atb)
+        np.savez(debug_path+'data_step2_snr.npz', lon=lon, lat=lat, alt=alt, atb=atb)
         print 'Detecting layers'
 
     # layer detection and cleanup
@@ -116,7 +117,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     # using the properties computed afterwards.
 
     if debug:
-        np.savez('debug_data/data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, base=base, hext=hext, top=top, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
+        np.savez(debug_path+'data_step3_cmask.npz', lon=lon, lat=lat, alt=alt, base=base, hext=hext, top=top, cloud_id=cloud_id, cloud_labeled_mask=cloud_labeled_mask)
         print 'Calculating layer properties'
 
     # layers properties
@@ -166,8 +167,8 @@ def main():
         print 'Usage : ./cel2_orbit.py calipso_l1_file'
         sys.exit(1)
         
-    if not os.path.isdir('debug_data'):
-        os.mkdir('debug_data')
+    if not os.path.isdir(debug_path):
+        os.mkdir(debug_path)
         
     cal_file = sys.argv[1]        
     process_orbit_file(cal_file, with_cp=False, debug=True)
