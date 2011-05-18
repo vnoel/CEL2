@@ -73,7 +73,7 @@ class cel2_data(object):
         self.midlayer_temperature = self.midlayer_temperature[:,:nlmax]
         self.integrated_attenuated_backscatter_532 = self.integrated_attenuated_backscatter_532[:,:nlmax]
         self.feature_optical_depth = self.feature_optical_depth[:,:nlmax]
-        self.integrated_particulate_depolarization_ratio = integrated_particulate_depolarization_ratio[:,:nlmax]
+        self.integrated_particulate_depolarization_ratio = self.integrated_particulate_depolarization_ratio[:,:nlmax]
         self.integrated_volume_depolarization_ratio = self.integrated_volume_depolarization_ratio[:,:nlmax]
         self.integrated_particulate_color_ratio = self.integrated_particulate_color_ratio[:,:nlmax]
         self.integrated_volume_color_ratio = self.integrated_volume_color_ratio[:,:nlmax]
@@ -176,12 +176,7 @@ class cel2_data(object):
         nc.createVariable('layer_top_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('layer_base_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('layer_temperature', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        # nc.createVariable('integrated_attenuated_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        # nc.createVariable('integrated_particulate_parallel_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        # nc.createVariable('integrated_particulate_perpendicular_backscatter_532', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        # nc.createVariable('integrated_particulate_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('integrated_volume_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        # nc.createVariable('integrated_particulate_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('integrated_volume_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('layer_optical_depth', 'f4', ('time', 'nmaxlayers'), zlib=True)
         nc.createVariable('layer_opacity_flag', 'i1', ('time', 'nmaxlayers'), zlib=True)
@@ -194,12 +189,7 @@ class cel2_data(object):
         nc.variables['layer_top_altitude'][:,:] = self.layer_top_altitude
         nc.variables['layer_base_altitude'][:,:] = self.layer_base_altitude
         nc.variables['layer_temperature'][:,:] = self.midlayer_temperature
-        # nc.variables['integrated_attenuated_backscatter_532'][:,:] = self.integrated_attenuated_backscatter_532
-        # nc.variables['integrated_particulate_parallel_backscatter_532'][:,:] = self.particulate_parallel_backscatter
-        # nc.variables['integrated_particulate_perpendicular_backscatter_532'][:,:] = self.particulate_perpendicular_backscatter
-        # nc.variables['integrated_particulate_depolarization_ratio'][:,:] = self.integrated_particulate_depolarization_ratio
         nc.variables['integrated_volume_depolarization_ratio'][:,:] = self.integrated_volume_depolarization_ratio
-        # nc.variables['integrated_particulate_color_ratio'][:,:] = self.integrated_particulate_color_ratio
         nc.variables['integrated_volume_color_ratio'][:,:] = self.integrated_volume_color_ratio
         nc.variables['layer_optical_depth'][:,:] = self.feature_optical_depth
         nc.variables['layer_opacity_flag'][:,:] = self.opacity_flag
@@ -213,9 +203,6 @@ class cel2_data(object):
         nc.variables['layer_temperature'].units = 'degrees Celsius'
         nc.variables['layer_top_altitude'].units = 'km'
         nc.variables['layer_base_altitude'].units = 'km'
-        # nc.variables['integrated_attenuated_backscatter_532'].units = 'km-1'
-        # nc.variables['integrated_particulate_parallel_backscatter_532'].units = 'km-1'
-        # nc.variables['integrated_particulate_perpendicular_backscatter_532'].units = 'km-1'
         
         nc.variables['cloud_horizontal_extension'].units = 'km'
 

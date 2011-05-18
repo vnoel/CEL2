@@ -128,9 +128,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     iatb = cel2_f.layers_iatb(base, top, atb, alt)
     od = cel2_f.layers_optical_depth(iatb)
     vdp = cel2_f.layers_volume_depolarization(base, top, para, perp, alt)
-    # pdp, part_para, part_perp = cel2_f.layers_particulate_depolarization(base, top, para, perp, alt, mol)
     vcr = cel2_f.layers_volume_color_ratio(base, top, atb, atb1064, alt)
-    # pcr = cel2_f.layers_particulate_color_ratio(base, top, atb, atb1064, alt, mol)
                         
     cel2_data.set_time(time)
     cel2_data.set_temperature(ltemp)
@@ -143,11 +141,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     cel2_data.set_iatb(iatb)
     cel2_data.set_od(od)
     cel2_data.set_volume_depolarization(vdp)
-    # cel2_data.set_particulate_depolarization(pdp)
-    # cel2_data.set_particulate_parallel_backscatter(part_para)
-    # cel2_data.set_particulate_perpendicular_backscatter(part_perp)
     cel2_data.set_volume_color_ratio(vcr)
-    # cel2_data.set_particulate_color_ratio(pcr)
     
     if debug:
         idx = base > 0
