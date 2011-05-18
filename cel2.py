@@ -81,6 +81,7 @@ class cel2_data(object):
         self.particulate_perpendicular_backscatter = self.particulate_perpendicular_backscatter[:,:nlmax]
         self.cloud_id = self.cloud_id[:,:nlmax]
         self.opacity_flag = self.opacity_flag[:,:nlmax]
+        self.nl = nlmax
         
         
     def invalid_data_based_on(self, mask):
@@ -167,7 +168,7 @@ class cel2_data(object):
         
         # time is an unlimited dimension
         nc.createDimension('time', None)
-        nc.createDimension('nmaxlayers', nl)
+        nc.createDimension('nmaxlayers', self.nl)
         nc.createDimension('nclouds', np.max(self.cloud_id) + 1)
         
         nc.createVariable('Profile_Time', 'f8', ('time',))
