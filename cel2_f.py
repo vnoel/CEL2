@@ -198,7 +198,7 @@ def layers_opacity(base, top, ground_return, datatype):
             continue
 
         # otherwise find the lowest layer
-        bases = base[i,:]
+        bases = np.copy(base[i,:])
         bases[bases < -1000] = +9999.        
         ilayer = np.argmin(bases)    
         if bases[ilayer] == 9999:
