@@ -1,0 +1,11 @@
+#!/bin/sh
+
+#PBS -N "cel2"
+
+#PBS -m e
+#PBS -q threedays
+
+cd $PBS_O_WORKDIR
+
+export PATH=/opt/epd/bin:$PATH
+./cel2_process_period.py 201011
