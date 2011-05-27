@@ -21,6 +21,10 @@ import os
 import cel2
 import cel2_f
 
+from shapely import geometry
+
+domain = None
+hmin, hmax = None, None
 navg = 1
 debug_path = '/homedata/noel/Projects/CEL2/debug_data/'
 
@@ -38,6 +42,12 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
         
     print 'Processing file : %s' % cal_file
     cal = calipso.Cal1(cal_file)
+    
+    if hmin is not None:
+        if cal.hour < hmin or cal.hour > hmax:
+            print 'File not in hour range, skipping'
+            cal.close()
+            return
             
     cel2_data = cel2.cel2_data(cal.year, cal.month, cal.day, cal.orbit, cal_file)
 
@@ -48,23 +58,42 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
             return
 
     lon, lat = cal.coords(navg=navg)
+
+    # take into account subdomain
+    if domain is None:
+        prof_idx = (0, -1)        
+    if domain is not None:
+        orbit = geometry.asMultiPoint(zip(lon, lat))
+        hits = orbit.intersection(geometry.Polygon(domain))
+        if hits.is_empty:
+            cal.close()
+            return
+        hits = np.array(hits)
+        if np.shape(hits)==() or hits.ndim==1:
+            cal.close()
+            return
+        profiles = np.in1d(lat, hits[:,1])
+        prof_idx = [int(np.argmax(profiles)), int(np.argmax(profiles) + np.sum(profiles))]
+        lon = lon[prof_idx[0]:prof_idx[1]]
+        lat = lat[prof_idx[0]:prof_idx[1]]
+
     nprof = lon.size
     cel2_data.init_data(nprof)
     
     alt = calipso.lidar_alt
     datatype = cal.orbit[-2:]
 
-    time = cal.time(navg=navg)
-    atb = cal.atb(navg=navg)
-    atb1064 = cal.atb1064(navg=navg)
-    perp = cal.perp(navg=navg)
+    time = cal.time(navg=navg, idx=prof_idx)
+    atb = cal.atb(navg=navg, idx=prof_idx)
+    atb1064 = cal.atb1064(navg=navg, idx=prof_idx)
+    perp = cal.perp(navg=navg, idx=prof_idx)
     para = atb - perp
-    temp = cal.temperature_on_lidar_alt(navg=navg)
-    mol = cal.mol_on_lidar_alt_calibrated(navg=navg, navgh=1000, zcal=(32,36))
-    tropoz = cal.tropopause_height(navg=navg)
-    elev = cal.surface_elevation(navg=navg)
+    temp = cal.temperature_on_lidar_alt(navg=navg, idx=prof_idx)
+    mol = cal.mol_on_lidar_alt_calibrated(navg=navg, navgh=1000, zcal=(32,36), idx=prof_idx)
+    tropoz = cal.tropopause_height(navg=navg, idx=prof_idx)
+    elev = cal.surface_elevation(navg=navg, idx=prof_idx)
     cal.close()
-    
+        
     if debug:
         print 'Loaded %d profiles' % (atb.shape[0])
         np.savez(debug_path+'data_step1_avg.npz', lat=lat, lon=lon, alt=alt, atb=atb, mol=mol, temp=temp)
@@ -153,9 +182,7 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     cel2_data.invalid_data_based_on(base)
 
     max_nlayers_in_profile = np.max(np.sum(base > 0, axis=1))
-    print 'Setting max nlayers to ', max_nlayers_in_profile
     cel2_data.set_nlayers_max(max_nlayers_in_profile)
-    
     cel2_data.save()
 
     if with_cp:

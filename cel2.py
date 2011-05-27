@@ -166,49 +166,55 @@ class cel2_data(object):
             os.mkdir(self.filepath)
         nc = netCDF4.Dataset(self.filepath + '/' + self.filename, 'w', format=netcdf_format)
         
+        print np.shape(self.layer_top_altitude)
+        
         # time is an unlimited dimension
         nc.createDimension('time', None)
-        nc.createDimension('nmaxlayers', self.nl)
-        nc.createDimension('nclouds', np.max(self.cloud_id) + 1)
+        if self.nl > 0:
+	        nc.createDimension('nmaxlayers', np.max([self.nl, 1]))
+	        nc.createDimension('nclouds', np.max(self.cloud_id) + 1)
         
         nc.createVariable('Profile_Time', 'f8', ('time',))
         nc.createVariable('longitude', 'f8', ('time',))
         nc.createVariable('latitude', 'f8', ('time',))
-        nc.createVariable('layer_top_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('layer_base_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('layer_temperature', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('integrated_volume_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('integrated_volume_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('layer_optical_depth', 'f4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('layer_opacity_flag', 'i1', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('layer_cloud_id', 'i4', ('time', 'nmaxlayers'), zlib=True)
-        nc.createVariable('cloud_horizontal_extension', 'f4', ('nclouds',), zlib=True)
+        if self.nl > 0:
+	        nc.createVariable('layer_top_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('layer_base_altitude', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('layer_temperature', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('integrated_volume_depolarization_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('integrated_volume_color_ratio', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('layer_optical_depth', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('layer_opacity_flag', 'i1', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('layer_cloud_id', 'i4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('cloud_horizontal_extension', 'f4', ('nclouds',), zlib=True)
         
         nc.variables['Profile_Time'][:] = self.time
         nc.variables['longitude'][:] = self.longitude
         nc.variables['latitude'][:] = self.latitude
-        nc.variables['layer_top_altitude'][:,:] = self.layer_top_altitude
-        nc.variables['layer_base_altitude'][:,:] = self.layer_base_altitude
-        nc.variables['layer_temperature'][:,:] = self.midlayer_temperature
-        nc.variables['integrated_volume_depolarization_ratio'][:,:] = self.integrated_volume_depolarization_ratio
-        nc.variables['integrated_volume_color_ratio'][:,:] = self.integrated_volume_color_ratio
-        nc.variables['layer_optical_depth'][:,:] = self.feature_optical_depth
-        nc.variables['layer_opacity_flag'][:,:] = self.opacity_flag
-        nc.variables['layer_cloud_id'][:,:] = self.cloud_id
-        nc.variables['cloud_horizontal_extension'][:] = self.horizontal_extension
+        if self.nl > 0:
+	        nc.variables['layer_top_altitude'][:,:] = self.layer_top_altitude
+	        nc.variables['layer_base_altitude'][:,:] = self.layer_base_altitude
+	        nc.variables['layer_temperature'][:,:] = self.midlayer_temperature
+	        nc.variables['integrated_volume_depolarization_ratio'][:,:] = self.integrated_volume_depolarization_ratio
+	        nc.variables['integrated_volume_color_ratio'][:,:] = self.integrated_volume_color_ratio
+	        nc.variables['layer_optical_depth'][:,:] = self.feature_optical_depth
+	        nc.variables['layer_opacity_flag'][:,:] = self.opacity_flag
+	        nc.variables['layer_cloud_id'][:,:] = self.cloud_id
+	        nc.variables['cloud_horizontal_extension'][:] = self.horizontal_extension
         
         nc.variables['Profile_Time'].units = "seconds...TAI"
         nc.variables['Profile_Time'].description = "Profile Time of the 1st CALIOP Level 1 profile used for averaging"
         nc.variables['longitude'].units = 'degrees East'
         nc.variables['latitude'].units = 'degrees North'
-        nc.variables['layer_temperature'].units = 'degrees Celsius'
-        nc.variables['layer_top_altitude'].units = 'km'
-        nc.variables['layer_base_altitude'].units = 'km'
-        
-        nc.variables['cloud_horizontal_extension'].units = 'km'
-
-        nc.variables['layer_opacity_flag'].description = '1 if no ground return can be found under the layer, 0 otherwise.\
-                                                          If 1, base altitude is not reliable for this layer.'
+        if self.nl > 0:
+	        nc.variables['layer_temperature'].units = 'degrees Celsius'
+	        nc.variables['layer_top_altitude'].units = 'km'
+	        nc.variables['layer_base_altitude'].units = 'km'
+	
+	        nc.variables['cloud_horizontal_extension'].units = 'km'
+	
+	        nc.variables['layer_opacity_flag'].description = '1 if no ground return can be found under the layer, 0 otherwise.\
+	                                                          If 1, base altitude is not reliable for this layer.'
 
         import time
         nc.description = 'CEL2 profile layer properties.'

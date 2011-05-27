@@ -14,6 +14,10 @@ import cel2
 import calipso
 
 cel2.outpath = '/homedata/noel/Projects/CEL2/'
+# hour range to process
+cel2_orbit.hmin, cel2_orbit.hmax = 0, 12
+# domain to process
+cel2_orbit.domain = [[-90,70], [+30,70], [+30,20], [-90,20]]
 
 def process_period(years, months, days, with_cp):
 
