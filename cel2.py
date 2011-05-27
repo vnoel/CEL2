@@ -166,8 +166,6 @@ class cel2_data(object):
             os.mkdir(self.filepath)
         nc = netCDF4.Dataset(self.filepath + '/' + self.filename, 'w', format=netcdf_format)
         
-        print np.shape(self.layer_top_altitude)
-        
         # time is an unlimited dimension
         nc.createDimension('time', None)
         if self.nl > 0:
