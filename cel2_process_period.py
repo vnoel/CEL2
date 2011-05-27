@@ -27,7 +27,7 @@ def process_period(years, months, days, with_cp):
                     
                 cal_list.sort()
                 for cal_file in cal_list:
-                    cel2_orbit.process_orbit_file(cal_file, with_cp=with_cp, replace=False)
+                    cel2_orbit.process_orbit_file(cal_file, with_cp=with_cp, replace=True)
 
 def main():
     
