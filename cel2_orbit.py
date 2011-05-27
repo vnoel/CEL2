@@ -107,7 +107,6 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     base, top = cel2_f.layers_merge_close(base, top)
     base, top = cel2_f.layers_remove_below(base, top, elev)
     base, top = cel2_f.layers_remove_above(base, top, tropoz + 3.)
-    print 'Max number of layers in profile : ', np.max(np.sum(base > 0, axis=1))
 
     # layer identification
     cloud_id, cloud_labeled_mask = cel2_f.layers_cloud_id(base, top, alt)
@@ -151,11 +150,12 @@ def process_orbit_file(cal_file, with_cp=False, replace=True, debug=False):
     if np.any(base > 1000.):
         print 'Huston, we have a problem: found layer bases > 1000 km'
 
+    cel2_data.invalid_data_based_on(base)
+
     max_nlayers_in_profile = np.max(np.sum(base > 0, axis=1))
     print 'Setting max nlayers to ', max_nlayers_in_profile
     cel2_data.set_nlayers_max(max_nlayers_in_profile)
     
-    cel2_data.invalid_data_based_on(base)
     cel2_data.save()
 
     if with_cp:
