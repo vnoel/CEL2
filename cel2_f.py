@@ -158,7 +158,7 @@ def layers_merge_close(base, top, closeness=0.12):
 
     return base, top
     
-    
+
 def layers_remove_below(base, top, zvector, invalid=-9999.):
     
     nprof = base.shape[0]
