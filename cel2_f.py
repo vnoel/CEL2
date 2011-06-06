@@ -4,6 +4,7 @@
 import numpy as np
 from scipy.integrate import trapz
 from scipy import ndimage
+from cel2 import nl
 
 # the threshold values below have been carefully calibrated for
 # nighttime data, not so much for daytime
@@ -16,9 +17,6 @@ min_snr_mid = {'ZN':4, 'ZD':9}
 
 # minimum snr for alt < 8.2 km
 min_snr_low = {'ZN':10, 'ZD':9}
-
-# max number of layers
-nl = 30
 
 # particular atb threshold for cloud detection
 atb_min = {'ZN':5e-4, 'ZD':1e-5}
@@ -254,7 +252,7 @@ def layers_cloud_id(base, top, alt):
             cloud_id[i,j] = np.max(labeled[i,idx])
                 
     return cloud_id, labeled
-    
+
 def cloud_horizontal_extension(cloud_labeled_mask, horizontal_resolution=0.333):
     
     nclouds = np.max(cloud_labeled_mask)
@@ -264,8 +262,7 @@ def cloud_horizontal_extension(cloud_labeled_mask, horizontal_resolution=0.333):
         hsl, vsl = sl
         hext[i] = (hsl.stop - hsl.start) * horizontal_resolution
     return hext
-    
-                
+
 def compute_ground_return(atb, alt, elev):
     
     nprof = atb.shape[0]
@@ -273,7 +270,10 @@ def compute_ground_return(atb, alt, elev):
     
     for i in np.arange(nprof):
         idx = (alt > (elev[i] - 0.3)) & (alt < (elev[i] + 0.1)) & (atb[i,:] > -100.)
-        ground_return[i] = _integrate_signal(atb[i,idx], alt[idx])
+        if idx.sum() > 0:
+            ground_return[i] = _integrate_signal(atb[i,idx], alt[idx])
+        else:
+            ground_return[i] = -9999.
         
     return ground_return
     

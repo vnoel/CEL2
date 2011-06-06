@@ -8,4 +8,4 @@
 cd $PBS_O_WORKDIR
 
 export PATH=/opt/epd/bin:$PATH
-./cel2_process_period.py 201011
+./cel2_process_period.py $date

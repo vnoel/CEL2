@@ -30,7 +30,7 @@ debug = False
 debug_file = None
 
 # maximum number of layers per profile
-nl = 30
+nl = 50
 
 class cel2_data(object):
     
@@ -185,6 +185,8 @@ class cel2_data(object):
 	        nc.createVariable('layer_opacity_flag', 'i1', ('time', 'nmaxlayers'), zlib=True)
 	        nc.createVariable('layer_cloud_id', 'i4', ('time', 'nmaxlayers'), zlib=True)
 	        nc.createVariable('cloud_horizontal_extension', 'f4', ('nclouds',), zlib=True)
+	        nc.createVariable('particulate_parallel_backscatter', 'f4', ('time', 'nmaxlayers'), zlib=True)
+	        nc.createVariable('particulate_perpendicular_backscatter', 'f4', ('time', 'nmaxlayers'), zlib=True)
         
         nc.variables['Profile_Time'][:] = self.time
         nc.variables['longitude'][:] = self.longitude
@@ -199,6 +201,8 @@ class cel2_data(object):
 	        nc.variables['layer_opacity_flag'][:,:] = self.opacity_flag
 	        nc.variables['layer_cloud_id'][:,:] = self.cloud_id
 	        nc.variables['cloud_horizontal_extension'][:] = self.horizontal_extension
+	        nc.variables['particulate_parallel_backscatter'][:] = self.particulate_parallel_backscatter
+	        nc.variables['particulate_perpendicular_backscatter'][:] = self.particulate_perpendicular_backscatter
         
         nc.variables['Profile_Time'].units = "seconds...TAI"
         nc.variables['Profile_Time'].description = "Profile Time of the 1st CALIOP Level 1 profile used for averaging"
